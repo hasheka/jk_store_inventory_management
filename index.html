@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JK Store — Inventory Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green:   #16A34A;
+    --green-lt:#DCFCE7;
+    --green-dk:#14532D;
+    --amber:   #D97706;
+    --amber-lt:#FEF3C7;
+    --red:     #DC2626;
+    --red-lt:  #FEE2E2;
+    --blue:    #2563EB;
+    --blue-lt: #DBEAFE;
+    --bg:      #F8FAFC;
+    --surface: #FFFFFF;
+    --border:  #E2E8F0;
+    --text:    #0F172A;
+    --muted:   #64748B;
+    --sidebar-bg: #0F172A;
+    --sidebar-text: #94A3B8;
+    --sidebar-active: #22C55E;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
+
+  /* ── Sidebar ── */
+  #sidebar {
+    width: 230px; min-width: 230px; background: var(--sidebar-bg);
+    display: flex; flex-direction: column; padding: 0; overflow: hidden;
+  }
+  .sb-header {
+    padding: 22px 20px 16px;
+    border-bottom: 1px solid rgba(255,255,255,.06);
+  }
+  .sb-logo {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 20px; font-weight: 700; color: #F1F5F9;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .sb-logo-icon {
+    width: 34px; height: 34px; background: var(--sidebar-active);
+    border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .sb-tagline { font-size: 11px; color: var(--sidebar-text); margin-top: 4px; margin-left: 44px; }
+  .sb-nav { flex: 1; padding: 14px 10px; display: flex; flex-direction: column; gap: 2px; }
+  .sb-label { font-size: 10px; font-weight: 600; color: #475569; letter-spacing: .08em; text-transform: uppercase; padding: 10px 10px 6px; }
+  .sb-item {
+    display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+    border-radius: 8px; font-size: 13px; color: var(--sidebar-text);
+    cursor: pointer; transition: all .15s; border: none; background: none; width: 100%; text-align: left;
+  }
+  .sb-item:hover { background: rgba(255,255,255,.06); color: #E2E8F0; }
+  .sb-item.active { background: rgba(34,197,94,.12); color: var(--sidebar-active); font-weight: 600; }
+  .sb-item .icon { font-size: 16px; width: 20px; text-align: center; }
+  .sb-footer { padding: 14px 20px; border-top: 1px solid rgba(255,255,255,.06); font-size: 11px; color: #475569; }
+  .sb-footer strong { color: #64748B; }
+
+  /* ── Main area ── */
+  #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .topbar {
+    height: 56px; background: var(--surface); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; padding: 0 24px;
+    flex-shrink: 0;
+  }
+  .topbar-title { font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700; color: var(--text); }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .btn {
+    padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 500;
+    cursor: pointer; border: 1px solid var(--border); background: var(--surface);
+    color: var(--text); transition: all .15s; font-family: 'Inter', sans-serif;
+  }
+  .btn:hover { background: var(--bg); }
+  .btn-primary { background: var(--green); color: white; border-color: var(--green); }
+  .btn-primary:hover { background: #15803D; border-color: #15803D; }
+  .btn-danger { background: var(--red-lt); color: var(--red); border-color: #FECACA; }
+  .btn-danger:hover { background: #FEE2E2; }
+
+  #content { flex: 1; overflow-y: auto; padding: 24px; }
+
+  /* ── Cards & KPIs ── */
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 22px; }
+  .kpi {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 18px; position: relative; overflow: hidden;
+  }
+  .kpi::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+  .kpi.green::before { background: var(--green); }
+  .kpi.red::before   { background: var(--red); }
+  .kpi.amber::before { background: var(--amber); }
+  .kpi.blue::before  { background: var(--blue); }
+  .kpi-label { font-size: 11px; color: var(--muted); font-weight: 500; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .05em; }
+  .kpi-val   { font-size: 30px; font-weight: 700; font-family: 'Space Grotesk', sans-serif; color: var(--text); }
+  .kpi-sub   { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  .section-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .section-title { font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 700; color: var(--text); }
+
+  /* ── Alerts ── */
+  .alert-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 22px; }
+  .alert {
+    display: flex; align-items: center; gap: 12px; padding: 11px 14px;
+    border-radius: 10px; font-size: 13px; border: 1px solid;
+  }
+  .alert.red    { background: var(--red-lt);   color: #991B1B; border-color: #FECACA; }
+  .alert.amber  { background: var(--amber-lt); color: #92400E; border-color: #FDE68A; }
+  .alert.green  { background: var(--green-lt); color: #166534; border-color: #BBF7D0; }
+  .alert-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .alert.red   .alert-dot { background: var(--red); }
+  .alert.amber .alert-dot { background: var(--amber); }
+  .alert.green .alert-dot { background: var(--green); }
+
+  /* ── Table ── */
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 22px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead tr { background: #F8FAFC; }
+  th { padding: 11px 14px; text-align: left; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid var(--border); }
+  td { padding: 12px 14px; border-bottom: 1px solid #F1F5F9; color: var(--text); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #FAFAFA; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px;
+    border-radius: 99px; font-size: 11px; font-weight: 600;
+  }
+  .badge.red    { background: var(--red-lt);   color: #991B1B; }
+  .badge.amber  { background: var(--amber-lt); color: #92400E; }
+  .badge.green  { background: var(--green-lt); color: #166534; }
+  .badge.blue   { background: var(--blue-lt);  color: #1E40AF; }
+
+  /* ── Stock bar ── */
+  .stock-bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .stock-bar-bg { width: 80px; height: 8px; background: #F1F5F9; border-radius: 4px; overflow: hidden; }
+  .stock-bar-fill { height: 100%; border-radius: 4px; }
+
+  /* ── Modal ── */
+  .modal-backdrop {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45);
+    z-index: 100; align-items: center; justify-content: center;
+  }
+  .modal-backdrop.show { display: flex; }
+  .modal {
+    background: var(--surface); border-radius: 16px; padding: 28px; width: 440px;
+    max-width: 95vw; box-shadow: 0 20px 60px rgba(0,0,0,.2); max-height: 85vh; overflow-y: auto;
+  }
+  .modal-title { font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 700; margin-bottom: 20px; }
+  .form-group { margin-bottom: 14px; }
+  .form-label { font-size: 12px; font-weight: 600; color: var(--muted); display: block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: .04em; }
+  .form-input {
+    width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 14px; font-family: 'Inter', sans-serif; color: var(--text);
+    background: var(--surface); transition: border .15s;
+  }
+  .form-input:focus { outline: none; border-color: var(--green); box-shadow: 0 0 0 3px rgba(22,163,74,.1); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px; background: #0F172A;
+    color: white; padding: 12px 18px; border-radius: 10px; font-size: 13px;
+    transform: translateY(80px); opacity: 0; transition: all .3s; z-index: 200;
+    display: flex; align-items: center; gap: 8px;
+  }
+  #toast.show { transform: translateY(0); opacity: 1; }
+
+  /* ── Search bar ── */
+  .search-wrap { position: relative; }
+  .search-input {
+    padding: 8px 12px 8px 34px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 13px; width: 220px; font-family: 'Inter', sans-serif;
+    background: var(--surface); color: var(--text);
+  }
+  .search-input:focus { outline: none; border-color: var(--green); }
+  .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 14px; pointer-events: none; }
+
+  /* ── Log page ── */
+  .log-entry { display: flex; align-items: flex-start; gap: 14px; padding: 14px 0; border-bottom: 1px solid #F1F5F9; }
+  .log-dot-wrap { display: flex; flex-direction: column; align-items: center; }
+  .log-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 3px; flex-shrink: 0; }
+  .log-dot.add    { background: var(--green); }
+  .log-dot.remove { background: var(--red); }
+  .log-dot.alert  { background: var(--amber); }
+  .log-text { font-size: 13px; color: var(--text); line-height: 1.5; }
+  .log-time { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* ── Settings ── */
+  .setting-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 0; border-bottom: 1px solid #F1F5F9;
+  }
+  .setting-label { font-size: 14px; font-weight: 500; color: var(--text); }
+  .setting-desc  { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .toggle { width: 40px; height: 22px; background: #CBD5E1; border-radius: 99px; position: relative; cursor: pointer; transition: background .2s; border: none; }
+  .toggle.on { background: var(--green); }
+  .toggle::after { content: ''; position: absolute; width: 16px; height: 16px; border-radius: 50%; background: white; top: 3px; left: 3px; transition: transform .2s; }
+  .toggle.on::after { transform: translateX(18px); }
+
+  /* ── Mini chart ── */
+  .mini-chart { display: flex; align-items: flex-end; gap: 3px; height: 32px; }
+  .mini-bar { width: 8px; border-radius: 2px 2px 0 0; background: #4ADE80; }
+
+  /* ── Category pill ── */
+  .cat-pill { padding: 4px 10px; border-radius: 99px; font-size: 11px; font-weight: 500; background: var(--bg); border: 1px solid var(--border); color: var(--muted); cursor: pointer; transition: all .15s; }
+  .cat-pill.active { background: var(--green); color: white; border-color: var(--green); }
+
+  /* ── Empty state ── */
+  .empty { text-align: center; padding: 48px 24px; color: var(--muted); }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+
+  /* ── Page hidden ── */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── Dashboard chart placeholder ── */
+  .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; margin-bottom: 22px; }
+  .chart-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 14px; }
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; font-size: 12px; }
+  .bar-name { width: 130px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-track { flex: 1; height: 12px; background: #F1F5F9; border-radius: 6px; overflow: hidden; }
+  .bar-fill2 { height: 100%; border-radius: 6px; }
+  .bar-num { width: 36px; text-align: right; font-weight: 600; color: var(--text); }
+
+  .two-col-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    #sidebar { display: none; }
+    .kpi-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══ SIDEBAR ═══ -->
+<nav id="sidebar">
+  <div class="sb-header">
+    <div class="sb-logo">
+      <div class="sb-logo-icon">🛒</div>
+      JK Store
+    </div>
+    <div class="sb-tagline">Inventory Manager v1.0</div>
+  </div>
+  <div class="sb-nav">
+    <div class="sb-label">Main</div>
+    <button class="sb-item active" onclick="navigate('dashboard', this)">
+      <span class="icon">📊</span> Dashboard
+    </button>
+    <button class="sb-item" onclick="navigate('inventory', this)">
+      <span class="icon">📦</span> Inventory
+    </button>
+    <button class="sb-item" onclick="navigate('add-sale', this)">
+      <span class="icon">🧾</span> Record Sale
+    </button>
+    <button class="sb-item" onclick="navigate('restock', this)">
+      <span class="icon">🔄</span> Restock
+    </button>
+    <div class="sb-label">Reports</div>
+    <button class="sb-item" onclick="navigate('log', this)">
+      <span class="icon">📋</span> Activity Log
+    </button>
+    <button class="sb-item" onclick="navigate('reports', this)">
+      <span class="icon">📈</span> Sales Report
+    </button>
+    <div class="sb-label">System</div>
+    <button class="sb-item" onclick="navigate('settings', this)">
+      <span class="icon">⚙️</span> Settings
+    </button>
+  </div>
+  <div class="sb-footer">
+    <strong>JK Store</strong> · Chennai<br>
+    Build-to-Learn 2026 · AMET University
+  </div>
+</nav>
+
+<!-- ═══ MAIN ═══ -->
+<div id="main">
+  <div class="topbar">
+    <div class="topbar-title" id="topbar-title">📊 Dashboard</div>
+    <div class="topbar-right">
+      <button class="btn btn-primary" onclick="openAddItem()">+ Add Item</button>
+    </div>
+  </div>
+  <div id="content">
+
+    <!-- ─── DASHBOARD ─── -->
+    <div class="page active" id="page-dashboard">
+      <div class="kpi-grid">
+        <div class="kpi green">
+          <div class="kpi-label">Total Items</div>
+          <div class="kpi-val" id="kpi-total">0</div>
+          <div class="kpi-sub">SKUs in inventory</div>
+        </div>
+        <div class="kpi red">
+          <div class="kpi-label">Critical Stock</div>
+          <div class="kpi-val" id="kpi-critical">0</div>
+          <div class="kpi-sub">Need immediate restock</div>
+        </div>
+        <div class="kpi amber">
+          <div class="kpi-label">Low Stock</div>
+          <div class="kpi-val" id="kpi-low">0</div>
+          <div class="kpi-sub">Restock within 3 days</div>
+        </div>
+        <div class="kpi blue">
+          <div class="kpi-label">Today's Sales</div>
+          <div class="kpi-val" id="kpi-sales">₹0</div>
+          <div class="kpi-sub" id="kpi-sales-units">0 units sold</div>
+        </div>
+      </div>
+
+      <div class="section-head">
+        <div class="section-title">⚠️ Stock Alerts</div>
+      </div>
+      <div class="alert-list" id="alert-list"></div>
+
+      <div class="two-col-grid">
+        <div class="chart-card">
+          <div class="chart-title">Current Stock Levels</div>
+          <div id="stock-bars"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Top Selling Items (Today)</div>
+          <div id="top-sellers"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── INVENTORY ─── -->
+    <div class="page" id="page-inventory">
+      <div class="section-head" style="margin-bottom:14px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap" id="cat-filters">
+          <span class="cat-pill active" onclick="filterCat('All',this)">All</span>
+          <span class="cat-pill" onclick="filterCat('Grains',this)">Grains</span>
+          <span class="cat-pill" onclick="filterCat('Oils',this)">Oils</span>
+          <span class="cat-pill" onclick="filterCat('Spices',this)">Spices</span>
+          <span class="cat-pill" onclick="filterCat('Snacks',this)">Snacks</span>
+          <span class="cat-pill" onclick="filterCat('Dairy',this)">Dairy</span>
+          <span class="cat-pill" onclick="filterCat('Other',this)">Other</span>
+        </div>
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input class="search-input" type="text" placeholder="Search items…" oninput="searchInventory(this.value)">
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Item Name</th>
+              <th>Category</th>
+              <th>Price (₹)</th>
+              <th>Stock</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="inv-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ─── RECORD SALE ─── -->
+    <div class="page" id="page-add-sale">
+      <div style="max-width:520px">
+        <div class="chart-card">
+          <div class="chart-title">Record a Sale</div>
+          <div class="form-group">
+            <label class="form-label">Select Item</label>
+            <select class="form-input" id="sale-item" onchange="updateSaleInfo()">
+              <option value="">— Choose an item —</option>
+            </select>
+          </div>
+          <div id="sale-info" style="display:none;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:10px 14px;font-size:13px;color:#166534;margin-bottom:14px">
+            In stock: <strong id="sale-stock-val">0</strong> units &nbsp;·&nbsp; Price: ₹<strong id="sale-price-val">0</strong>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Quantity Sold</label>
+              <input class="form-input" type="number" id="sale-qty" min="1" value="1" oninput="calcSaleTotal()">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Total (₹)</label>
+              <input class="form-input" type="text" id="sale-total" readonly style="background:#F8FAFC;font-weight:600">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Date</label>
+            <input class="form-input" type="date" id="sale-date">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Customer / Note (optional)</label>
+            <input class="form-input" type="text" id="sale-note" placeholder="Walk-in, wholesale, etc.">
+          </div>
+          <button class="btn btn-primary" style="width:100%;padding:11px" onclick="recordSale()">✅ Record Sale</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── RESTOCK ─── -->
+    <div class="page" id="page-restock">
+      <div style="margin-bottom:16px;font-size:13px;color:var(--muted)">
+        Items below need restocking. Enter the quantity you're adding and click Restock.
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Current Stock</th>
+              <th>Status</th>
+              <th>Add Quantity</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="restock-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ─── LOG ─── -->
+    <div class="page" id="page-log">
+      <div class="chart-card" style="max-width:640px">
+        <div class="chart-title">Activity Log</div>
+        <div id="log-list"></div>
+      </div>
+    </div>
+
+    <!-- ─── REPORTS ─── -->
+    <div class="page" id="page-reports">
+      <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
+        <div class="kpi green">
+          <div class="kpi-label">Total Revenue</div>
+          <div class="kpi-val" id="rep-revenue">₹0</div>
+          <div class="kpi-sub">All time</div>
+        </div>
+        <div class="kpi blue">
+          <div class="kpi-label">Total Units Sold</div>
+          <div class="kpi-val" id="rep-units">0</div>
+          <div class="kpi-sub">All time</div>
+        </div>
+        <div class="kpi amber">
+          <div class="kpi-label">Total Transactions</div>
+          <div class="kpi-val" id="rep-txns">0</div>
+          <div class="kpi-sub">Recorded sales</div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Sales by Item (All Time)</div>
+        <div id="report-bars"></div>
+      </div>
+    </div>
+
+    <!-- ─── SETTINGS ─── -->
+    <div class="page" id="page-settings">
+      <div class="chart-card" style="max-width:520px">
+        <div class="chart-title">Store Settings</div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Store Name</div>
+            <div class="setting-desc">Shown on all pages and reports</div>
+          </div>
+          <input class="form-input" type="text" value="JK Store" style="width:160px">
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Low Stock Threshold</div>
+            <div class="setting-desc">Alert when stock falls below this</div>
+          </div>
+          <input class="form-input" type="number" value="20" style="width:80px">
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Critical Stock Threshold</div>
+            <div class="setting-desc">Red alert below this level</div>
+          </div>
+          <input class="form-input" type="number" value="10" style="width:80px">
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Low Stock Alerts</div>
+            <div class="setting-desc">Show alerts on dashboard</div>
+          </div>
+          <button class="toggle on" onclick="this.classList.toggle('on')"></button>
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Auto-log Restocks</div>
+            <div class="setting-desc">Add restock events to activity log</div>
+          </div>
+          <button class="toggle on" onclick="this.classList.toggle('on')"></button>
+        </div>
+        <div style="margin-top:18px;display:flex;gap:10px">
+          <button class="btn btn-primary" onclick="showToast('✅ Settings saved!')">Save Settings</button>
+          <button class="btn btn-danger" onclick="if(confirm('Reset ALL data? This cannot be undone.')) { localStorage.removeItem('jkstore'); location.reload(); }">Reset Data</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- ═══ ADD ITEM MODAL ═══ -->
+<div class="modal-backdrop" id="modal-add">
+  <div class="modal">
+    <div class="modal-title">Add New Item</div>
+    <div class="form-group">
+      <label class="form-label">Item Name</label>
+      <input class="form-input" type="text" id="new-name" placeholder="e.g. Toor Dal (1kg)">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <select class="form-input" id="new-cat">
+          <option>Grains</option><option>Oils</option><option>Spices</option>
+          <option>Snacks</option><option>Dairy</option><option>Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Price per unit (₹)</label>
+        <input class="form-input" type="number" id="new-price" min="0" placeholder="0">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Opening Stock</label>
+        <input class="form-input" type="number" id="new-stock" min="0" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Unit</label>
+        <select class="form-input" id="new-unit">
+          <option>kg</option><option>g</option><option>L</option><option>ml</option>
+          <option>pcs</option><option>packet</option><option>bottle</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="addItem()">Add Item</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ EDIT ITEM MODAL ═══ -->
+<div class="modal-backdrop" id="modal-edit">
+  <div class="modal">
+    <div class="modal-title">Edit Item</div>
+    <input type="hidden" id="edit-id">
+    <div class="form-group">
+      <label class="form-label">Item Name</label>
+      <input class="form-input" type="text" id="edit-name">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <select class="form-input" id="edit-cat">
+          <option>Grains</option><option>Oils</option><option>Spices</option>
+          <option>Snacks</option><option>Dairy</option><option>Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Price (₹)</label>
+        <input class="form-input" type="number" id="edit-price" min="0">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Current Stock</label>
+        <input class="form-input" type="number" id="edit-stock" min="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Unit</label>
+        <select class="form-input" id="edit-unit">
+          <option>kg</option><option>g</option><option>L</option><option>ml</option>
+          <option>pcs</option><option>packet</option><option>bottle</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" onclick="deleteItem()">Delete</button>
+      <button class="btn" onclick="closeModal('modal-edit')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TOAST ═══ -->
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════
+//  DATA LAYER — localStorage persistence
+// ══════════════════════════════════════════════
+const STORE_KEY = 'jkstore_data';
+
+const defaultItems = [
+  { id:1,  name:'Rice (5kg)',        cat:'Grains', price:310, stock:43, unit:'kg',     soldTotal:176 },
+  { id:2,  name:'Toor Dal (1kg)',    cat:'Grains', price:145, stock:28, unit:'kg',     soldTotal:101 },
+  { id:3,  name:'Sunflower Oil (1L)',cat:'Oils',   price:185, stock:9,  unit:'L',      soldTotal:81  },
+  { id:4,  name:'Sugar (1kg)',       cat:'Grains', price:50,  stock:20, unit:'kg',     soldTotal:121 },
+  { id:5,  name:'Tea Powder (250g)', cat:'Other',  price:95,  stock:17, unit:'packet', soldTotal:99  },
+  { id:6,  name:'Parle-G Biscuits', cat:'Snacks',  price:10,  stock:25, unit:'pcs',   soldTotal:256 },
+  { id:7,  name:'Atta (5kg)',        cat:'Grains', price:290, stock:22, unit:'kg',     soldTotal:101 },
+  { id:8,  name:'Salt (1kg)',        cat:'Other',  price:25,  stock:61, unit:'kg',     soldTotal:44  },
+  { id:9,  name:'Mustard Oil (1L)',  cat:'Oils',   price:175, stock:14, unit:'L',      soldTotal:63  },
+  { id:10, name:'Chilli Powder',     cat:'Spices', price:80,  stock:32, unit:'packet', soldTotal:48  },
+];
+
+const defaultLog = [
+  { type:'add',    text:'Opening stock entered for 10 items', time:'2026-05-01 09:00' },
+  { type:'remove', text:'Sale: Rice (5kg) × 12 — ₹3,720',    time:'2026-05-01 10:30' },
+  { type:'remove', text:'Sale: Parle-G Biscuits × 30 — ₹300', time:'2026-05-02 11:00' },
+  { type:'add',    text:'Restocked: Sunflower Oil (1L) +24 units', time:'2026-05-03 09:15' },
+  { type:'alert',  text:'Low stock alert: Tea Powder (250g) — 17 units', time:'2026-05-10 08:00' },
+  { type:'alert',  text:'Critical stock: Sunflower Oil (1L) — 9 units', time:'2026-05-13 08:00' },
+];
+
+const defaultSales = [];
+
+function loadData() {
+  const raw = localStorage.getItem(STORE_KEY);
+  if (raw) return JSON.parse(raw);
+  return { items: defaultItems, log: defaultLog, sales: defaultSales, nextId: 11 };
+}
+
+function saveData() {
+  localStorage.setItem(STORE_KEY, JSON.stringify(DB));
+}
+
+let DB = loadData();
+let currentCat = 'All';
+let searchTerm  = '';
+const LOW_THRESH      = 20;
+const CRITICAL_THRESH = 10;
+
+// ══════════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════════
+const pageTitles = {
+  dashboard: '📊 Dashboard',
+  inventory:  '📦 Inventory',
+  'add-sale': '🧾 Record Sale',
+  restock:    '🔄 Restock Items',
+  log:        '📋 Activity Log',
+  reports:    '📈 Sales Report',
+  settings:   '⚙️ Settings',
+};
+
+function navigate(page, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.querySelectorAll('.sb-item').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  document.getElementById('topbar-title').textContent = pageTitles[page];
+  renderPage(page);
+}
+
+function renderPage(page) {
+  if (page === 'dashboard')  renderDashboard();
+  if (page === 'inventory')  renderInventory();
+  if (page === 'add-sale')   renderSaleForm();
+  if (page === 'restock')    renderRestock();
+  if (page === 'log')        renderLog();
+  if (page === 'reports')    renderReports();
+}
+
+// ══════════════════════════════════════════════
+//  DASHBOARD
+// ══════════════════════════════════════════════
+function renderDashboard() {
+  const items = DB.items;
+  const critical = items.filter(i => i.stock <= CRITICAL_THRESH);
+  const low      = items.filter(i => i.stock > CRITICAL_THRESH && i.stock <= LOW_THRESH);
+
+  // Today's sales
+  const today = new Date().toISOString().slice(0,10);
+  const todaySales = DB.sales.filter(s => s.date === today);
+  const todayRev   = todaySales.reduce((a,s) => a + s.total, 0);
+  const todayUnits = todaySales.reduce((a,s) => a + s.qty, 0);
+
+  document.getElementById('kpi-total').textContent    = items.length;
+  document.getElementById('kpi-critical').textContent = critical.length;
+  document.getElementById('kpi-low').textContent      = low.length;
+  document.getElementById('kpi-sales').textContent    = '₹' + todayRev.toLocaleString('en-IN');
+  document.getElementById('kpi-sales-units').textContent = todayUnits + ' units sold';
+
+  // Alerts
+  const alertList = document.getElementById('alert-list');
+  if (critical.length === 0 && low.length === 0) {
+    alertList.innerHTML = `<div class="alert green"><div class="alert-dot"></div>All items are well-stocked. No action needed today. 🎉</div>`;
+  } else {
+    alertList.innerHTML =
+      critical.map(i => `<div class="alert red"><div class="alert-dot"></div><strong>${i.name}</strong> — Only ${i.stock} units left. Restock IMMEDIATELY.</div>`).join('') +
+      low.map(i => `<div class="alert amber"><div class="alert-dot"></div><strong>${i.name}</strong> — ${i.stock} units remaining. Consider restocking soon.</div>`).join('');
+  }
+
+  // Stock bars
+  const sorted = [...items].sort((a,b) => a.stock - b.stock).slice(0, 8);
+  const maxStock = Math.max(...sorted.map(i => i.stock), 1);
+  document.getElementById('stock-bars').innerHTML = sorted.map(i => {
+    const pct  = Math.round((i.stock / maxStock) * 100);
+    const col  = i.stock <= CRITICAL_THRESH ? '#EF4444' : i.stock <= LOW_THRESH ? '#F59E0B' : '#22C55E';
+    return `<div class="bar-row">
+      <div class="bar-name">${i.name}</div>
+      <div class="bar-track"><div class="bar-fill2" style="width:${pct}%;background:${col}"></div></div>
+      <div class="bar-num">${i.stock}</div>
+    </div>`;
+  }).join('');
+
+  // Top sellers
+  const topSellers = [...items].sort((a,b) => b.soldTotal - a.soldTotal).slice(0,6);
+  const maxSold    = Math.max(...topSellers.map(i => i.soldTotal), 1);
+  document.getElementById('top-sellers').innerHTML = topSellers.map(i => {
+    const pct = Math.round((i.soldTotal / maxSold) * 100);
+    return `<div class="bar-row">
+      <div class="bar-name">${i.name}</div>
+      <div class="bar-track"><div class="bar-fill2" style="width:${pct}%;background:#60A5FA"></div></div>
+      <div class="bar-num">${i.soldTotal}</div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════
+//  INVENTORY TABLE
+// ══════════════════════════════════════════════
+function renderInventory(cat, search) {
+  if (cat    !== undefined) currentCat  = cat;
+  if (search !== undefined) searchTerm  = search.toLowerCase();
+
+  let items = DB.items;
+  if (currentCat !== 'All') items = items.filter(i => i.cat === currentCat);
+  if (searchTerm)            items = items.filter(i => i.name.toLowerCase().includes(searchTerm));
+
+  const body = document.getElementById('inv-table-body');
+  if (items.length === 0) {
+    body.innerHTML = `<tr><td colspan="6"><div class="empty"><div class="empty-icon">📭</div><div class="empty-title">No items found</div>Try a different category or search term.</div></td></tr>`;
+    return;
+  }
+  body.innerHTML = items.map(i => {
+    const statusClass = i.stock <= CRITICAL_THRESH ? 'red' : i.stock <= LOW_THRESH ? 'amber' : 'green';
+    const statusLabel = i.stock <= CRITICAL_THRESH ? '🔴 Critical' : i.stock <= LOW_THRESH ? '🟡 Low' : '🟢 OK';
+    const pct = Math.min(Math.round((i.stock / 80) * 100), 100);
+    const barCol = i.stock <= CRITICAL_THRESH ? '#EF4444' : i.stock <= LOW_THRESH ? '#F59E0B' : '#22C55E';
+    return `<tr>
+      <td><strong>${i.name}</strong></td>
+      <td><span class="badge blue">${i.cat}</span></td>
+      <td>₹${i.price}</td>
+      <td>
+        <div class="stock-bar-wrap">
+          <div class="stock-bar-bg"><div class="stock-bar-fill" style="width:${pct}%;background:${barCol}"></div></div>
+          <span style="font-size:12px;font-weight:600">${i.stock} ${i.unit}</span>
+        </div>
+      </td>
+      <td><span class="badge ${statusClass}">${statusLabel}</span></td>
+      <td>
+        <button class="btn" style="padding:5px 10px;font-size:12px" onclick="openEditItem(${i.id})">Edit</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function filterCat(cat, el) {
+  document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  renderInventory(cat);
+}
+
+function searchInventory(val) {
+  renderInventory(undefined, val);
+}
+
+// ══════════════════════════════════════════════
+//  SALE FORM
+// ══════════════════════════════════════════════
+function renderSaleForm() {
+  const sel = document.getElementById('sale-item');
+  sel.innerHTML = '<option value="">— Choose an item —</option>' +
+    DB.items.map(i => `<option value="${i.id}">${i.name} (${i.stock} in stock)</option>`).join('');
+  document.getElementById('sale-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('sale-total').value = '';
+  document.getElementById('sale-qty').value = 1;
+  document.getElementById('sale-info').style.display = 'none';
+}
+
+function updateSaleInfo() {
+  const id = parseInt(document.getElementById('sale-item').value);
+  const item = DB.items.find(i => i.id === id);
+  if (!item) { document.getElementById('sale-info').style.display = 'none'; return; }
+  document.getElementById('sale-info').style.display = 'block';
+  document.getElementById('sale-stock-val').textContent = item.stock;
+  document.getElementById('sale-price-val').textContent = item.price;
+  calcSaleTotal();
+}
+
+function calcSaleTotal() {
+  const id  = parseInt(document.getElementById('sale-item').value);
+  const qty = parseInt(document.getElementById('sale-qty').value) || 0;
+  const item = DB.items.find(i => i.id === id);
+  if (!item) return;
+  document.getElementById('sale-total').value = '₹' + (item.price * qty).toLocaleString('en-IN');
+}
+
+function recordSale() {
+  const id   = parseInt(document.getElementById('sale-item').value);
+  const qty  = parseInt(document.getElementById('sale-qty').value) || 0;
+  const date = document.getElementById('sale-date').value;
+  const note = document.getElementById('sale-note').value;
+  const item = DB.items.find(i => i.id === id);
+  if (!item) return showToast('⚠️ Please select an item');
+  if (qty <= 0) return showToast('⚠️ Enter a valid quantity');
+  if (qty > item.stock) return showToast(`⚠️ Only ${item.stock} units in stock`);
+
+  item.stock -= qty;
+  item.soldTotal += qty;
+  const total = item.price * qty;
+  DB.sales.push({ itemId: id, itemName: item.name, qty, total, date, note });
+  DB.log.unshift({ type:'remove', text:`Sale: ${item.name} × ${qty} — ₹${total.toLocaleString('en-IN')}${note ? ' (' + note + ')' : ''}`, time: new Date().toLocaleString('en-IN') });
+  saveData();
+  showToast(`✅ Sale recorded — ₹${total.toLocaleString('en-IN')}`);
+  renderSaleForm();
+}
+
+// ══════════════════════════════════════════════
+//  RESTOCK
+// ══════════════════════════════════════════════
+function renderRestock() {
+  const needRestock = DB.items.filter(i => i.stock <= LOW_THRESH).sort((a,b) => a.stock - b.stock);
+  const tbody = document.getElementById('restock-table');
+  if (needRestock.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty"><div class="empty-icon">🎉</div><div class="empty-title">All stocked up!</div>No items need restocking right now.</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = needRestock.map(i => {
+    const sc = i.stock <= CRITICAL_THRESH ? 'red' : 'amber';
+    const sl = i.stock <= CRITICAL_THRESH ? '🔴 Critical' : '🟡 Low';
+    return `<tr>
+      <td><strong>${i.name}</strong><br><span style="font-size:11px;color:var(--muted)">${i.cat}</span></td>
+      <td><strong>${i.stock}</strong> ${i.unit}</td>
+      <td><span class="badge ${sc}">${sl}</span></td>
+      <td><input type="number" class="form-input" id="rst-${i.id}" min="1" placeholder="Qty" style="width:90px"></td>
+      <td><button class="btn btn-primary" style="padding:6px 12px;font-size:12px" onclick="doRestock(${i.id})">Restock</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function doRestock(id) {
+  const qty  = parseInt(document.getElementById('rst-' + id).value) || 0;
+  const item = DB.items.find(i => i.id === id);
+  if (!item || qty <= 0) return showToast('⚠️ Enter a valid quantity');
+  item.stock += qty;
+  DB.log.unshift({ type:'add', text:`Restocked: ${item.name} +${qty} units (stock now: ${item.stock})`, time: new Date().toLocaleString('en-IN') });
+  saveData();
+  showToast(`✅ ${item.name} restocked — ${item.stock} units now`);
+  renderRestock();
+}
+
+// ══════════════════════════════════════════════
+//  LOG
+// ══════════════════════════════════════════════
+function renderLog() {
+  const list = document.getElementById('log-list');
+  if (DB.log.length === 0) { list.innerHTML = '<div class="empty"><div class="empty-title">No activity yet</div></div>'; return; }
+  list.innerHTML = DB.log.slice(0,30).map(l => `
+    <div class="log-entry">
+      <div class="log-dot-wrap"><div class="log-dot ${l.type}"></div></div>
+      <div><div class="log-text">${l.text}</div><div class="log-time">${l.time}</div></div>
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════════════
+//  REPORTS
+// ══════════════════════════════════════════════
+function renderReports() {
+  const totalRev   = DB.sales.reduce((a,s) => a + s.total, 0);
+  const totalUnits = DB.sales.reduce((a,s) => a + s.qty, 0);
+  document.getElementById('rep-revenue').textContent = '₹' + totalRev.toLocaleString('en-IN');
+  document.getElementById('rep-units').textContent   = totalUnits.toLocaleString('en-IN');
+  document.getElementById('rep-txns').textContent    = DB.sales.length;
+
+  const topSellers = [...DB.items].sort((a,b) => b.soldTotal - a.soldTotal);
+  const maxSold    = Math.max(...topSellers.map(i => i.soldTotal), 1);
+  document.getElementById('report-bars').innerHTML = topSellers.map(i => {
+    const pct = Math.round((i.soldTotal / maxSold) * 100);
+    return `<div class="bar-row">
+      <div class="bar-name">${i.name}</div>
+      <div class="bar-track"><div class="bar-fill2" style="width:${pct}%;background:#4F8EF7"></div></div>
+      <div class="bar-num">${i.soldTotal}</div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════
+//  ADD / EDIT / DELETE ITEM
+// ══════════════════════════════════════════════
+function openAddItem() {
+  document.getElementById('new-name').value  = '';
+  document.getElementById('new-price').value = '';
+  document.getElementById('new-stock').value = '';
+  document.getElementById('modal-add').classList.add('show');
+}
+
+function addItem() {
+  const name  = document.getElementById('new-name').value.trim();
+  const cat   = document.getElementById('new-cat').value;
+  const price = parseFloat(document.getElementById('new-price').value) || 0;
+  const stock = parseInt(document.getElementById('new-stock').value)   || 0;
+  const unit  = document.getElementById('new-unit').value;
+  if (!name) return showToast('⚠️ Enter an item name');
+  DB.items.push({ id: DB.nextId++, name, cat, price, stock, unit, soldTotal: 0 });
+  DB.log.unshift({ type:'add', text:`New item added: ${name} (${stock} ${unit} @ ₹${price})`, time: new Date().toLocaleString('en-IN') });
+  saveData();
+  closeModal();
+  showToast(`✅ ${name} added to inventory`);
+  renderPage('dashboard');
+}
+
+function openEditItem(id) {
+  const item = DB.items.find(i => i.id === id);
+  if (!item) return;
+  document.getElementById('edit-id').value    = id;
+  document.getElementById('edit-name').value  = item.name;
+  document.getElementById('edit-price').value = item.price;
+  document.getElementById('edit-stock').value = item.stock;
+  document.getElementById('edit-cat').value   = item.cat;
+  document.getElementById('edit-unit').value  = item.unit;
+  document.getElementById('modal-edit').classList.add('show');
+}
+
+function saveEdit() {
+  const id   = parseInt(document.getElementById('edit-id').value);
+  const item = DB.items.find(i => i.id === id);
+  if (!item) return;
+  item.name  = document.getElementById('edit-name').value.trim() || item.name;
+  item.price = parseFloat(document.getElementById('edit-price').value) || item.price;
+  item.stock = parseInt(document.getElementById('edit-stock').value);
+  item.cat   = document.getElementById('edit-cat').value;
+  item.unit  = document.getElementById('edit-unit').value;
+  DB.log.unshift({ type:'add', text:`Edited: ${item.name} — stock: ${item.stock}, price: ₹${item.price}`, time: new Date().toLocaleString('en-IN') });
+  saveData();
+  closeModal('modal-edit');
+  showToast(`✅ ${item.name} updated`);
+  renderInventory();
+}
+
+function deleteItem() {
+  const id   = parseInt(document.getElementById('edit-id').value);
+  const item = DB.items.find(i => i.id === id);
+  if (!item) return;
+  if (!confirm(`Delete "${item.name}"? This cannot be undone.`)) return;
+  DB.items = DB.items.filter(i => i.id !== id);
+  DB.log.unshift({ type:'alert', text:`Deleted item: ${item.name}`, time: new Date().toLocaleString('en-IN') });
+  saveData();
+  closeModal('modal-edit');
+  showToast(`🗑️ ${item.name} deleted`);
+  renderInventory();
+}
+
+// ══════════════════════════════════════════════
+//  MODAL & TOAST HELPERS
+// ══════════════════════════════════════════════
+function closeModal(id) {
+  document.getElementById(id || 'modal-add').classList.remove('show');
+}
+document.querySelectorAll('.modal-backdrop').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show'); });
+});
+
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ══════════════════════════════════════════════
+//  BOOT
+// ══════════════════════════════════════════════
+renderDashboard();
+</script>
+</body>
+</html>

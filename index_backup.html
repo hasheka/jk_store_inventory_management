@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JK Store — Inventory Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ═══ SIDEBAR ═══ -->
+<nav id="sidebar">
+  <div class="sb-header">
+    <div class="sb-logo">
+      <div class="sb-logo-icon">🛒</div>
+      JK Store
+    </div>
+    <div class="sb-tagline">Inventory Manager v1.0</div>
+  </div>
+  <div class="sb-nav">
+    <div class="sb-label">Main</div>
+    <button class="sb-item active" onclick="navigate('dashboard', this)">
+      <span class="icon">📊</span> Dashboard
+    </button>
+    <button class="sb-item" onclick="navigate('inventory', this)">
+      <span class="icon">📦</span> Inventory
+    </button>
+    <button class="sb-item" onclick="navigate('add-sale', this)">
+      <span class="icon">🧾</span> Record Sale
+    </button>
+    <button class="sb-item" onclick="navigate('restock', this)">
+      <span class="icon">🔄</span> Restock
+    </button>
+    <div class="sb-label">Reports</div>
+    <button class="sb-item" onclick="navigate('log', this)">
+      <span class="icon">📋</span> Activity Log
+    </button>
+    <button class="sb-item" onclick="navigate('reports', this)">
+      <span class="icon">📈</span> Sales Report
+    </button>
+    <div class="sb-label">System</div>
+    <button class="sb-item" onclick="navigate('settings', this)">
+      <span class="icon">⚙️</span> Settings
+    </button>
+  </div>
+  <div class="sb-footer">
+    <strong>JK Store</strong> · Chennai<br>
+    Build-to-Learn 2026 · AMET University
+  </div>
+</nav>
+
+<!-- ═══ MAIN ═══ -->
+<div id="main">
+  <div class="topbar">
+    <div class="topbar-title" id="topbar-title">📊 Dashboard</div>
+    <div class="topbar-right">
+      <button class="btn btn-primary" onclick="openAddItem()">+ Add Item</button>
+    </div>
+  </div>
+  <div id="content">
+
+    <!-- ─── DASHBOARD ─── -->
+    <div class="page active" id="page-dashboard">
+      <div class="kpi-grid">
+        <div class="kpi green">
+          <div class="kpi-label">Total Items</div>
+          <div class="kpi-val" id="kpi-total">0</div>
+          <div class="kpi-sub">SKUs in inventory</div>
+        </div>
+        <div class="kpi red">
+          <div class="kpi-label">Critical Stock</div>
+          <div class="kpi-val" id="kpi-critical">0</div>
+          <div class="kpi-sub">Need immediate restock</div>
+        </div>
+        <div class="kpi amber">
+          <div class="kpi-label">Low Stock</div>
+          <div class="kpi-val" id="kpi-low">0</div>
+          <div class="kpi-sub">Restock within 3 days</div>
+        </div>
+        <div class="kpi blue">
+          <div class="kpi-label">Today's Sales</div>
+          <div class="kpi-val" id="kpi-sales">₹0</div>
+          <div class="kpi-sub" id="kpi-sales-units">0 units sold</div>
+        </div>
+      </div>
+
+      <div class="section-head">
+        <div class="section-title">⚠️ Stock Alerts</div>
+      </div>
+      <div class="alert-list" id="alert-list"></div>
+
+      <div class="two-col-grid">
+        <div class="chart-card">
+          <div class="chart-title">Current Stock Levels</div>
+          <div id="stock-bars"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Top Selling Items (Today)</div>
+          <div id="top-sellers"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── INVENTORY ─── -->
+    <div class="page" id="page-inventory">
+      <div class="section-head" style="margin-bottom:14px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap" id="cat-filters">
+          <span class="cat-pill active" onclick="filterCat('All',this)">All</span>
+          <span class="cat-pill" onclick="filterCat('Grains',this)">Grains</span>
+          <span class="cat-pill" onclick="filterCat('Oils',this)">Oils</span>
+          <span class="cat-pill" onclick="filterCat('Spices',this)">Spices</span>
+          <span class="cat-pill" onclick="filterCat('Snacks',this)">Snacks</span>
+          <span class="cat-pill" onclick="filterCat('Dairy',this)">Dairy</span>
+          <span class="cat-pill" onclick="filterCat('Other',this)">Other</span>
+        </div>
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input class="search-input" type="text" placeholder="Search items…" oninput="searchInventory(this.value)">
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Item Name</th>
+              <th>Category</th>
+              <th>Price (₹)</th>
+              <th>Stock</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="inv-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ─── RECORD SALE ─── -->
+    <div class="page" id="page-add-sale">
+      <div style="max-width:520px">
+        <div class="chart-card">
+          <div class="chart-title">Record a Sale</div>
+          <div class="form-group">
+            <label class="form-label">Select Item</label>
+            <select class="form-input" id="sale-item" onchange="updateSaleInfo()">
+              <option value="">— Choose an item —</option>
+            </select>
+          </div>
+          <div id="sale-info" style="display:none;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:10px 14px;font-size:13px;color:#166534;margin-bottom:14px">
+            In stock: <strong id="sale-stock-val">0</strong> units &nbsp;·&nbsp; Price: ₹<strong id="sale-price-val">0</strong>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Quantity Sold</label>
+              <input class="form-input" type="number" id="sale-qty" min="1" value="1" oninput="calcSaleTotal()">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Total (₹)</label>
+              <input class="form-input" type="text" id="sale-total" readonly style="background:#F8FAFC;font-weight:600">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Date</label>
+            <input class="form-input" type="date" id="sale-date">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Customer / Note (optional)</label>
+            <input class="form-input" type="text" id="sale-note" placeholder="Walk-in, wholesale, etc.">
+          </div>
+          <button class="btn btn-primary" style="width:100%;padding:11px" onclick="recordSale()">✅ Record Sale</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── RESTOCK ─── -->
+    <div class="page" id="page-restock">
+      <div style="margin-bottom:16px;font-size:13px;color:var(--muted)">
+        Items below need restocking. Enter the quantity you're adding and click Restock.
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Current Stock</th>
+              <th>Status</th>
+              <th>Add Quantity</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="restock-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ─── LOG ─── -->
+    <div class="page" id="page-log">
+      <div class="chart-card" style="max-width:640px">
+        <div class="chart-title">Activity Log</div>
+        <div id="log-list"></div>
+      </div>
+    </div>
+
+    <!-- ─── REPORTS ─── -->
+    <div class="page" id="page-reports">
+      <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
+        <div class="kpi green">
+          <div class="kpi-label">Total Revenue</div>
+          <div class="kpi-val" id="rep-revenue">₹0</div>
+          <div class="kpi-sub">All time</div>
+        </div>
+        <div class="kpi blue">
+          <div class="kpi-label">Total Units Sold</div>
+          <div class="kpi-val" id="rep-units">0</div>
+          <div class="kpi-sub">All time</div>
+        </div>
+        <div class="kpi amber">
+          <div class="kpi-label">Total Transactions</div>
+          <div class="kpi-val" id="rep-txns">0</div>
+          <div class="kpi-sub">Recorded sales</div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Sales by Item (All Time)</div>
+        <div id="report-bars"></div>
+      </div>
+    </div>
+
+    <!-- ─── SETTINGS ─── -->
+    <div class="page" id="page-settings">
+      <div class="chart-card" style="max-width:520px">
+        <div class="chart-title">Store Settings</div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Store Name</div>
+            <div class="setting-desc">Shown on all pages and reports</div>
+          </div>
+          <input class="form-input" type="text" value="JK Store" style="width:160px">
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Low Stock Threshold</div>
+            <div class="setting-desc">Alert when stock falls below this</div>
+          </div>
+          <input class="form-input" type="number" value="20" style="width:80px">
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Critical Stock Threshold</div>
+            <div class="setting-desc">Red alert below this level</div>
+          </div>
+          <input class="form-input" type="number" value="10" style="width:80px">
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Low Stock Alerts</div>
+            <div class="setting-desc">Show alerts on dashboard</div>
+          </div>
+          <button class="toggle on" onclick="this.classList.toggle('on')"></button>
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Auto-log Restocks</div>
+            <div class="setting-desc">Add restock events to activity log</div>
+          </div>
+          <button class="toggle on" onclick="this.classList.toggle('on')"></button>
+        </div>
+        <div style="margin-top:18px;display:flex;gap:10px">
+          <button class="btn btn-primary" onclick="showToast('✅ Settings saved!')">Save Settings</button>
+          <button class="btn btn-danger" onclick="if(confirm('Reset ALL data? This cannot be undone.')) { localStorage.removeItem('jkstore'); location.reload(); }">Reset Data</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- ═══ ADD ITEM MODAL ═══ -->
+<div class="modal-backdrop" id="modal-add">
+  <div class="modal">
+    <div class="modal-title">Add New Item</div>
+    <div class="form-group">
+      <label class="form-label">Item Name</label>
+      <input class="form-input" type="text" id="new-name" placeholder="e.g. Toor Dal (1kg)">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <select class="form-input" id="new-cat">
+          <option>Grains</option><option>Oils</option><option>Spices</option>
+          <option>Snacks</option><option>Dairy</option><option>Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Price per unit (₹)</label>
+        <input class="form-input" type="number" id="new-price" min="0" placeholder="0">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Opening Stock</label>
+        <input class="form-input" type="number" id="new-stock" min="0" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Unit</label>
+        <select class="form-input" id="new-unit">
+          <option>kg</option><option>g</option><option>L</option><option>ml</option>
+          <option>pcs</option><option>packet</option><option>bottle</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="addItem()">Add Item</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ EDIT ITEM MODAL ═══ -->
+<div class="modal-backdrop" id="modal-edit">
+  <div class="modal">
+    <div class="modal-title">Edit Item</div>
+    <input type="hidden" id="edit-id">
+    <div class="form-group">
+      <label class="form-label">Item Name</label>
+      <input class="form-input" type="text" id="edit-name">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <select class="form-input" id="edit-cat">
+          <option>Grains</option><option>Oils</option><option>Spices</option>
+          <option>Snacks</option><option>Dairy</option><option>Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Price (₹)</label>
+        <input class="form-input" type="number" id="edit-price" min="0">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Current Stock</label>
+        <input class="form-input" type="number" id="edit-stock" min="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Unit</label>
+        <select class="form-input" id="edit-unit">
+          <option>kg</option><option>g</option><option>L</option><option>ml</option>
+          <option>pcs</option><option>packet</option><option>bottle</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" onclick="deleteItem()">Delete</button>
+      <button class="btn" onclick="closeModal('modal-edit')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TOAST ═══ -->
+<div id="toast"></div>
+<script src="script.js"></script>
+</body>
+</html>
